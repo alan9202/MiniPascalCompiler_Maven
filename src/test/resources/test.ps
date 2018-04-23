@@ -1,0 +1,70 @@
+procedure a is
+b: Integer;
+begin
+    null;
+
+    output(a);
+    
+    a := 12;
+    output(a);
+    
+    b := a;
+    output(b);
+    
+    c := 7 + 5;
+    output(c);
+    
+    d := 7 - 5;
+    output(d);
+    
+    e := 7 * 5;
+    output(e);
+    
+    f := 7 / 5;
+    output(f);
+
+    g := 5 + 6 - 7 * 8 / 9;
+    output(g);
+
+    h := (5 + 6 - 7) * (8 / 9);
+    output(h);
+
+    i := (5 + 6) - (7 * 8) / 9;
+    output(i);
+
+    if a then
+        a := 5;
+    else
+        a := 6;
+    endif
+    
+    output(a);
+
+    for b in 5 to 10
+    loop
+        if a then
+            a := 5;
+        else
+            a := 6;
+        endif
+        output(a);
+        output (b);
+    endloop
+
+    for b in 5 to 10
+    loop
+        for c in 0 to 15
+        loop
+            output (c);
+            output (b);
+            if i then
+                output(i);
+            else
+                output(h);
+            endif
+        endloop
+    endloop
+
+    input(b);
+    output(b);
+end;

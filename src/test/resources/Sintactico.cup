@@ -1,0 +1,212 @@
+/* ---------------Seccion de Importacion y Empaquetamiento--------------------*/
+package com.own.develop.compiler;
+/*
+    Import the class java_cup.runtime.*
+*/
+import java.io.File;
+import java.io.FileReader;
+import com.own.develop.compiler.expressions.*;
+import com.own.develop.compiler.statements.*;
+
+/* ---------------Seccion de Codigo de Usuario--------------------*/
+
+/*
+    Codigo del parser, se copia integramente a la clase final.
+    Agregamos el manejo de errores.
+*/
+parser code {:
+
+    /*
+        Reporte de error encontrado.
+    */
+    public void report_error(String message, Object info) {
+        StringBuilder sb = new StringBuilder("Error");
+        if (info instanceof java_cup.runtime.Symbol) {
+            java_cup.runtime.Symbol s = ((java_cup.runtime.Symbol) info);
+            if (s.left >= 0) {
+                sb.append(" in line " + s.left);
+            }
+            if (s.right >= 0) {
+                sb.append(", column " + s.right);
+            }
+        }
+        sb.append(" : "+message);
+    }
+
+    /*
+        Cuando se encuentra un error donde el sistema no puede recuperarse, se lanza un error fatal. Se despliega el mensaje de error y se finaliza la ejecucion.
+    */
+    public void report_fatal_error(String message, Object info) {
+        report_error(message, info);
+    }
+
+    /*
+        Metodo main para garantizar la ejecucion del analizador lexico y sintactico, ademas que se pase como parametro la tabla de simbolos correspondiente.
+    */
+    public static void exect(String file) {
+        exect(new File(file));
+    }
+    
+    public static void exect(File file) {
+        try {
+            SintacticAnalyzer asin = new SintacticAnalyzer(new LexicalAnalyzer( new FileReader(file)));
+            Block result = (Block) asin.parse().value;
+            result.doAction();
+        } catch (Exception ex) {
+            
+        }
+    }
+:};
+
+/* ------------Declaracion de Simbolos Terminales y No Terminales---------- */
+
+/*
+    Terminales (tokens obtenidos por el analizador lexico).
+    Terminales que no tienen un valor son listados primero, los terminales que tienen un valor como los enteros son listados en la segunda o demas lineas.
+*/
+terminal Token      PROCEDURE, IS, INTEGER, TWOP, SEMI, BEGIN, END, EQUAL, FOR, IN, TO, LOOP, ENDLOOP,
+                    IF, THEN, ELSE, ENDIF, INPUT, OUTPUT, PIZQ, PDER, NULL, OP_ADD, OP_SUB,
+                    OP_MULT, OP_DIV, DIGITO, IDENTIFIER;
+
+/*
+    No terminales usados en la seccion gramatical.
+    Primero se lista los no terminales que tienen un valor Object y despues se lista los no terminales que tienen un entero.
+    Un Object se refiere a que no tienen tipo, pudiendo ser entero o String.
+*/
+non terminal Object         program, header, body, declarations;
+non terminal Block          block;
+non terminal StatementList  statements;
+non terminal Statement      statement, assigment_statement, for_statement, if_statement, input_statement, output_statement, null_statement;
+non terminal Identifier     identifier;
+non terminal Expression     expression;
+non terminal Digit          constant;
+
+/* -------------Seccion de Predencia y Asociatividad----------- */
+
+/*
+    Precedencia de los no terminales, no sirve con simbolos terminales.
+    Por eso no la usamos.
+    Además indica si se asocia a izquierda o derecha.
+*/
+precedence left  OP_ADD, OP_SUB;
+precedence left  OP_MULT, OP_DIV;
+
+/* ------------------- Seccion de la Gramatica ------------------------ */
+
+program                 ::= PROCEDURE header body: bd
+                            {:
+                              RESULT = bd;
+                            :};
+header                  ::= identifier IS;
+body                    ::= declarations block: blck
+                            {:
+                              RESULT = blck;
+                            :};
+declarations            ::= identifier TWOP INTEGER SEMI |
+                            identifier TWOP INTEGER SEMI declarations;
+block                   ::= BEGIN statements: stms END SEMI
+                            {:
+                              RESULT = new Block(stms);
+                            :};
+statements              ::= statement: stm
+                            {:
+                              StatementList stmList = new StatementList();
+
+                              stmList.addElement(stm);
+
+                              RESULT = stmList;
+                            :}  |
+                            statement: stm statements: stms
+                            {:
+                              if (stms == null) {
+                                stms = new StatementList();
+                              }
+
+                              stms.addElement(stm);
+
+                              RESULT = stms;
+                            :};
+statement               ::= assigment_statement: astm
+                            {:
+                              RESULT = astm;
+                            :} |
+                            null_statement: nstm
+                            {:
+                              RESULT = nstm;
+                            :}  |
+                            for_statement: fstm
+                            {:
+                              RESULT = fstm;
+                            :} |
+                            if_statement: istm
+                            {:
+                              RESULT = istm;
+                            :} |
+                            input_statement: instm
+                            {:
+                              RESULT = instm;
+                            :} |
+                            output_statement: ostmn
+                            {:
+                              RESULT = ostmn;
+                            :};
+assigment_statement     ::= identifier : id EQUAL: eq expression : ex SEMI
+                            {:
+                              RESULT = new AssigmentStm(id, ex, eq.getLine(), eq.getColumn());
+                            :};
+if_statement            ::= IF: ifStm expression: ex THEN statements: stm1 ELSE statements: stm2 ENDIF
+                            {:
+                              RESULT = new IfStm(ex, stm1, stm2, ifStm.getLine(), ifStm.getColumn());
+                            :};
+for_statement           ::= FOR: forStm identifier: id IN constant: cons1 TO constant: cons2 LOOP statements: stm ENDLOOP
+                            {:
+                              RESULT = new ForStm(id, cons1, cons2, stm, forStm.getLine(), forStm.getColumn());
+                            :};
+input_statement         ::= INPUT PIZQ identifier: id PDER SEMI
+                            {:
+                              RESULT = new InputStm(id, id.getLine(), id.getColumn());
+                            :};
+output_statement        ::= OUTPUT PIZQ identifier : id PDER SEMI
+                            {:
+                              RESULT = new OutputStm(id, id.getLine(), id.getColumn());
+                            :};
+null_statement          ::= NULL: nullStm SEMI
+                            {:
+                              RESULT = new NullStm();
+                            :};
+expression              ::= expression: ex1 OP_ADD: add expression: ex2
+                            {:
+                              RESULT = new ArithmeticOperation(ex1, ex2, OperationType.ADD);
+                            :} |
+                            expression: ex1 OP_SUB: sub expression: ex2
+                            {:
+                              RESULT = new ArithmeticOperation(ex1, ex2, OperationType.SUB);
+                            :} |
+                            expression: ex1 OP_MULT: mult expression: ex2
+                            {:
+                              RESULT = new ArithmeticOperation(ex1, ex2, OperationType.MULT);
+                            :} |
+                            expression: ex1 OP_DIV: div expression: ex2
+                            {:
+                              RESULT = new ArithmeticOperation(ex1, ex2, OperationType.DIV);
+                            :} |
+                            PIZQ  expression: ex  PDER
+                            {:
+                              RESULT = ex;
+                            :} |
+                            constant: cons
+                            {:
+                              RESULT = cons;
+                            :} |
+                            identifier: id
+                            {:
+                              RESULT = id;
+                            :};
+constant                ::= DIGITO: d
+                            {:
+                              RESULT = new Digit((Integer) d.getValue());
+                            :};
+identifier              ::= IDENTIFIER : id
+                            {:
+                              RESULT = new Identifier((String) id.getValue());
+                            :};
