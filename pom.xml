@@ -7,7 +7,7 @@
   <groupId>com.own.develop</groupId>
   <artifactId>mini-pascal-compiler</artifactId>
   <version>1.0-SNAPSHOT</version>
-  <packing>jar</packing>
+  <packaging>jar</packaging>
 
   <name>mini-pascal-compiler</name>
   <!-- FIXME change it to the project's website -->

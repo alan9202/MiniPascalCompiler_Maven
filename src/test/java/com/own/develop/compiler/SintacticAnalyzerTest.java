@@ -2,9 +2,9 @@ package com.own.develop.compiler;
 
 import java.io.File;
 
-import org.junit.Test;
-
 import com.own.develop.util.GetResourcesFile;
+
+import org.junit.Test;
 
 public class SintacticAnalyzerTest {
     
